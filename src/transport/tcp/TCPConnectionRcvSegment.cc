@@ -86,8 +86,8 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 
-    if (rcvSeqVector) rcvSeqVector->record(tcpseg->getSequenceNo());
-    if (rcvAckVector) rcvAckVector->record(tcpseg->getAckNo());
+    tcpMain->emit(rcvSeqSignal, tcpseg->getSequenceNo());
+    tcpMain->emit(rcvAckSignal, tcpseg->getAckNo());
 
     //
     // Note: this code is organized exactly as RFC 793, section "3.9 Event
@@ -454,8 +454,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             if (old_rcv_nxt==state->rcv_nxt)
             {
                     state->rcv_oooseg++;
-                    if (rcvOooSegVector)
-                        rcvOooSegVector->record(state->rcv_oooseg);
+                    tcpMain->emit(rcvOooSegSignal, state->rcv_oooseg);
 
                     // RFC 2018, page 4:
                     // "The receiver SHOULD send an ACK for every valid segment that arrives
@@ -514,8 +513,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             else    // not enough freeRcvBuffer in rcvQueue for new segment
             {
                 state->tcpRcvQueueDrops++; // update current number of tcp receive queue drops
-                if (tcpRcvQueueDropsVector)
-                    tcpRcvQueueDropsVector->record(state->tcpRcvQueueDrops);
+                tcpMain->emit(tcpRcvQueueDropsSignal, state->tcpRcvQueueDrops);
 
                 // if the ACK bit is off drop the segment and return
                 tcpEV << "RcvQueueBuffer has run out, dropping segment\n";
@@ -763,8 +761,7 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
             else    // not enough freeRcvBuffer in rcvQueue for new segment
             {
                 state->tcpRcvQueueDrops++; // update current number of tcp receive queue drops
-                if (tcpRcvQueueDropsVector)
-                    tcpRcvQueueDropsVector->record(state->tcpRcvQueueDrops);
+                tcpMain->emit(tcpRcvQueueDropsSignal, state->tcpRcvQueueDrops);
 
                 tcpEV << "RcvQueueBuffer has run out, dropping segment\n";
                 return TCP_E_IGNORE;
@@ -911,8 +908,7 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
                 else    // not enough freeRcvBuffer in rcvQueue for new segment
                 {
                     state->tcpRcvQueueDrops++; // update current number of tcp receive queue drops
-                    if (tcpRcvQueueDropsVector)
-                        tcpRcvQueueDropsVector->record(state->tcpRcvQueueDrops);
+                    tcpMain->emit(tcpRcvQueueDropsSignal, state->tcpRcvQueueDrops);
 
                     tcpEV << "RcvQueueBuffer has run out, dropping segment\n";
                     return TCP_E_IGNORE;
@@ -967,8 +963,7 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
             else    // not enough freeRcvBuffer in rcvQueue for new segment
             {
                 state->tcpRcvQueueDrops++; // update current number of tcp receive queue drops
-                if (tcpRcvQueueDropsVector)
-                    tcpRcvQueueDropsVector->record(state->tcpRcvQueueDrops);
+                tcpMain->emit(tcpRcvQueueDropsSignal, state->tcpRcvQueueDrops);
 
                 tcpEV << "RcvQueueBuffer has run out, dropping segment\n";
                 return TCP_E_IGNORE;
@@ -1063,8 +1058,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         if (state->snd_una==tcpseg->getAckNo() && tcpseg->getPayloadLength()==0 && state->snd_una!=state->snd_max)
         {
             state->dupacks++;
-            if (dupAcksVector)
-                dupAcksVector->record(state->dupacks);
+			tcpMain->emit(dupAcksSignal, state->dupacks);
 
             // we need to update send window even if the ACK is a dupACK, because rcv win could have been changed if faulty data receiver is not respecting the "do not shrink window" rule
             updateWndInfo(tcpseg);
@@ -1087,8 +1081,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 
             // reset counter
             state->dupacks = 0;
-            if (dupAcksVector)
-                dupAcksVector->record(state->dupacks);
+            tcpMain->emit(dupAcksSignal, state->dupacks);
         }
     }
     else if (seqLE(tcpseg->getAckNo(), state->snd_max))
@@ -1096,7 +1089,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         // ack in window.
         uint32 old_snd_una = state->snd_una;
         state->snd_una = tcpseg->getAckNo();
-        if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
+        tcpMain->emit(unackedSignal, state->snd_max - state->snd_una);
 
         // after retransmitting a lost segment, we may get an ack well ahead of snd_nxt
         if (seqLess(state->snd_nxt, state->snd_una))
@@ -1129,8 +1122,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 
         // in the receivedDataAck we need the old value
         state->dupacks = 0;
-        if (dupAcksVector)
-            dupAcksVector->record(state->dupacks);
+        tcpMain->emit(dupAcksSignal, state->dupacks);
     }
     else
     {
@@ -1139,8 +1131,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         // send an ACK, drop the segment, and return.
         tcpAlgorithm->receivedAckForDataNotYetSent(tcpseg->getAckNo());
         state->dupacks = 0;
-        if (dupAcksVector)
-            dupAcksVector->record(state->dupacks);
+        tcpMain->emit(dupAcksSignal, state->dupacks);
         return false;  // means "drop"
     }
 

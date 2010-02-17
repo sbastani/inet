@@ -86,8 +86,8 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 
-    if (rcvSeqVector) rcvSeqVector->record(tcpseg->getSequenceNo());
-    if (rcvAckVector) rcvAckVector->record(tcpseg->getAckNo());
+    tcpMain->emit(rcvSeqSignal, tcpseg->getSequenceNo());
+    tcpMain->emit(rcvAckSignal, tcpseg->getAckNo());
 
     //
     // Note: this code is organized exactly as RFC 793, section "3.9 Event
@@ -657,7 +657,7 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         state->snd_wnd = tcpseg->getWindow();
         state->snd_wl1 = tcpseg->getSequenceNo();
         state->snd_wl2 = state->iss;
-        if (sndWndVector) sndWndVector->record(state->snd_wnd);
+        tcpMain->emit(sndWndSignal, state->snd_wnd);
 
         sendSynAck();
         startSynRexmitTimer();
@@ -776,7 +776,7 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
             state->snd_wnd = tcpseg->getWindow();
             state->snd_wl1 = tcpseg->getSequenceNo();
             state->snd_wl2 = tcpseg->getAckNo();
-            if (sndWndVector) sndWndVector->record(state->snd_wnd);
+            tcpMain->emit(sndWndSignal, state->snd_wnd);
         }
 
         // this also seems to be a good time to learn our local IP address
@@ -953,7 +953,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         // ack in window.
         uint32 old_snd_una = state->snd_una;
         state->snd_una = tcpseg->getAckNo();
-        if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
+        tcpMain->emit(unackedSignal, state->snd_max - state->snd_una);
 
         // after retransmitting a lost segment, we may get an ack well ahead of snd_nxt
         if (seqLess(state->snd_nxt, state->snd_una))
@@ -981,7 +981,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
             state->snd_wnd = tcpseg->getWindow();
             state->snd_wl1 = tcpseg->getSequenceNo();
             state->snd_wl2 = tcpseg->getAckNo();
-            if (sndWndVector) sndWndVector->record(state->snd_wnd);
+            tcpMain->emit(sndWndSignal, state->snd_wnd);
         }
 
         // notify

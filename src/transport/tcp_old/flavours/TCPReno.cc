@@ -35,7 +35,7 @@ void TCPReno::recalculateSlowStartThreshold()
     // (the formula below practically amounts to ssthresh=cwnd/2 most of the time)
     uint flight_size = std::min(state->snd_cwnd, state->snd_wnd);
     state->ssthresh = std::max(flight_size/2, 2*state->snd_mss);
-    if (ssthreshVector) ssthreshVector->record(state->ssthresh);
+    conn->getTcpMain()->emit(ssthreshSignal, state->ssthresh);
 }
 
 void TCPReno::processRexmitTimer(TCPEventCode& event)
@@ -47,7 +47,7 @@ void TCPReno::processRexmitTimer(TCPEventCode& event)
     // begin Slow Start (RFC2001)
     recalculateSlowStartThreshold();
     state->snd_cwnd = state->snd_mss;
-    if (cwndVector) cwndVector->record(state->snd_cwnd);
+    conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -66,7 +66,7 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
         //
         tcpEV << "Fast Recovery: setting cwnd to ssthresh=" << state->ssthresh << "\n";
         state->snd_cwnd = state->ssthresh;
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
     }
     else
     {
@@ -92,7 +92,7 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
             // int bytesAcked = state->snd_una - firstSeqAcked;
             // state->snd_cwnd += bytesAcked*state->snd_mss;
 
-            if (cwndVector) cwndVector->record(state->snd_cwnd);
+            conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
             tcpEV << "cwnd=" << state->snd_cwnd << "\n";
         }
@@ -103,7 +103,7 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
             if (incr==0)
                 incr = 1;
             state->snd_cwnd += incr;
-            if (cwndVector) cwndVector->record(state->snd_cwnd);
+            conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
             //
             // NOTE: some implementations use extra additive constant mss/8 here
@@ -137,7 +137,7 @@ void TCPReno::receivedDuplicateAck()
         // "set cwnd to ssthresh plus 3 times the segment size." (rfc 2001)
         recalculateSlowStartThreshold();
         state->snd_cwnd = state->ssthresh + 3*state->snd_mss;  // 20051129 (1)
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         tcpEV << "set cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -157,11 +157,9 @@ void TCPReno::receivedDuplicateAck()
         //
         state->snd_cwnd += state->snd_mss;
         tcpEV << "Reno on dupAck>3: Fast Recovery: inflating cwnd by MSS, new cwnd=" << state->snd_cwnd << "\n";
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         // cwnd increased, try sending
         sendData();  // 20051129 (2)
     }
 }
-
-

@@ -75,7 +75,6 @@ void SCTPClient::initialize()
 	queueSize = par("queueSize");
 	WATCH(numRequestsToSend);
 	numBytes = par("requestLength");
-	recordScalar("ums", numBytes);
 	timeMsg->setKind(MSGKIND_CONNECT);
 	scheduleAt((simtime_t)par("startTime"), timeMsg);
 	sendAllowed = true;

@@ -33,6 +33,9 @@ class INET_API DuplicatesGenerator : public cSimpleModule
     unsigned int numPackets;
 	unsigned int numDuplicated;
 	bool generateFurtherDuplicates;
+    simsignal_t receivedPacketSignal;
+    simsignal_t duplicatedPacketSignal;
+
 	std::vector<unsigned int> duplicatesVector;
 
     virtual void initialize();

@@ -45,7 +45,7 @@ void TCPNewReno::recalculateSlowStartThreshold()
     uint32 flight_size = std::min(state->snd_cwnd, state->snd_wnd); // FIXME TODO - Does this formula computes the amount of outstanding data?
 	// uint32 flight_size = state->snd_max - state->snd_una;
     state->ssthresh = std::max(flight_size/2, 2*state->snd_mss);
-    if (ssthreshVector) ssthreshVector->record(state->ssthresh);
+    conn->getTcpMain()->emit(ssthreshSignal, state->ssthresh);
 }
 
 void TCPNewReno::processRexmitTimer(TCPEventCode& event)
@@ -81,7 +81,7 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     // begin Slow Start (RFC 2581)
     recalculateSlowStartThreshold();
     state->snd_cwnd = state->snd_mss;
-    if (cwndVector) cwndVector->record(state->snd_cwnd);
+    conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -131,7 +131,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 			// state->snd_cwnd = state->ssthresh;
 			// tcpEV << "Fast Recovery - Full ACK received: Exit Fast Recovery, setting cwnd to ssthresh=" << state->ssthresh << "\n";
 			// TODO - If the second option (2) is selected, take measures to avoid a possible burst of data (maxburst)!
-			if (cwndVector) cwndVector->record(state->snd_cwnd);
+			conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
 			state->lossRecovery = false;
 			state->firstPartialACK = false;
@@ -167,14 +167,14 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
 			// deflate cwnd by amount of new data acknowledged by cumulative acknowledgement field
 			state->snd_cwnd -= state->snd_una - firstSeqAcked;
-			if (cwndVector) cwndVector->record(state->snd_cwnd);
+			conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 			tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
 
 			// if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
 			if (state->snd_una - firstSeqAcked >= state->snd_mss)
 			{
 				state->snd_cwnd += state->snd_mss;
-				if (cwndVector) cwndVector->record(state->snd_cwnd);
+				conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 				tcpEV << "Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
 			}
 
@@ -217,7 +217,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             // int bytesAcked = state->snd_una - firstSeqAcked;
             // state->snd_cwnd += bytesAcked*state->snd_mss;
 
-            if (cwndVector) cwndVector->record(state->snd_cwnd);
+            conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
             tcpEV << "cwnd=" << state->snd_cwnd << "\n";
         }
@@ -228,7 +228,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             if (incr==0)
                 incr = 1;
             state->snd_cwnd += incr;
-            if (cwndVector) cwndVector->record(state->snd_cwnd);
+            conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
             //
             // NOTE: some implementations use extra additive constant mss/8 here
@@ -299,7 +299,7 @@ void TCPNewReno::receivedDuplicateAck()
 				// of segments (three) that have left the network and the receiver
 				// has buffered."
 				state->snd_cwnd = state->ssthresh + 3*state->snd_mss;
-				if (cwndVector) cwndVector->record(state->snd_cwnd);
+				conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 				tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
 				conn->retransmitOneSegment();
 
@@ -334,7 +334,7 @@ void TCPNewReno::receivedDuplicateAck()
 			// congestion window in order to reflect the additional segment that
 			// has left the network."
 			state->snd_cwnd += state->snd_mss;
-			if (cwndVector) cwndVector->record(state->snd_cwnd);
+			conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 			tcpEV << "NewReno on dupAck>DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
 
 			// RFC 3782, page 5:

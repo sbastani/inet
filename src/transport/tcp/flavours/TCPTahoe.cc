@@ -35,7 +35,7 @@ void TCPTahoe::recalculateSlowStartThreshold()
     uint32 flight_size = std::min(state->snd_cwnd, state->snd_wnd); // FIXME TODO - Does this formula computes the amount of outstanding data?
 	// uint32 flight_size = state->snd_max - state->snd_una;
     state->ssthresh = std::max(flight_size/2, 2*state->snd_mss);
-    if (ssthreshVector) ssthreshVector->record(state->ssthresh);
+    conn->getTcpMain()->emit(ssthreshSignal, state->ssthresh);
 }
 
 void TCPTahoe::processRexmitTimer(TCPEventCode& event)
@@ -47,7 +47,7 @@ void TCPTahoe::processRexmitTimer(TCPEventCode& event)
     // begin Slow Start (RFC 2581)
     recalculateSlowStartThreshold();
     state->snd_cwnd = state->snd_mss;
-    if (cwndVector) cwndVector->record(state->snd_cwnd);
+    conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -80,7 +80,7 @@ void TCPTahoe::receivedDataAck(uint32 firstSeqAcked)
         // int bytesAcked = state->snd_una - firstSeqAcked;
         // state->snd_cwnd += bytesAcked;
 
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         tcpEV << "cwnd=" << state->snd_cwnd << "\n";
     }
@@ -91,7 +91,7 @@ void TCPTahoe::receivedDataAck(uint32 firstSeqAcked)
         if (incr==0)
             incr = 1;
         state->snd_cwnd += incr;
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         //
         // NOTE: some implementations use extra additive constant mss/8 here
@@ -119,7 +119,7 @@ void TCPTahoe::receivedDuplicateAck()
         // enter Slow Start
         recalculateSlowStartThreshold();
         state->snd_cwnd = state->snd_mss;
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         tcpEV << "Set cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -140,5 +140,3 @@ void TCPTahoe::receivedDuplicateAck()
 		// Resetting the REXMIT timer is discussed in RFC 2582/3782 (NewReno) and RFC 2988.
     }
 }
-
-

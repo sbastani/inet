@@ -35,7 +35,7 @@ void TCPTahoe::recalculateSlowStartThreshold()
     // (the formula below practically amounts to ssthresh=cwnd/2 most of the time)
     uint flight_size = std::min(state->snd_cwnd, state->snd_wnd);
     state->ssthresh = std::max(flight_size/2, 2*state->snd_mss);
-    if (ssthreshVector) ssthreshVector->record(state->ssthresh);
+    conn->getTcpMain()->emit(ssthreshSignal, state->ssthresh);
 }
 
 void TCPTahoe::processRexmitTimer(TCPEventCode& event)
@@ -47,7 +47,7 @@ void TCPTahoe::processRexmitTimer(TCPEventCode& event)
     // begin Slow Start (RFC2001)
     recalculateSlowStartThreshold();
     state->snd_cwnd = state->snd_mss;
-    if (cwndVector) cwndVector->record(state->snd_cwnd);
+    conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -78,7 +78,7 @@ void TCPTahoe::receivedDataAck(uint32 firstSeqAcked)
         // int bytesAcked = state->snd_una - firstSeqAcked;
         // state->snd_cwnd += bytesAcked;
 
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         tcpEV << "cwnd=" << state->snd_cwnd << "\n";
     }
@@ -89,7 +89,7 @@ void TCPTahoe::receivedDataAck(uint32 firstSeqAcked)
         if (incr==0)
             incr = 1;
         state->snd_cwnd += incr;
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         //
         // NOTE: some implementations use extra additive constant mss/8 here
@@ -121,7 +121,7 @@ void TCPTahoe::receivedDuplicateAck()
         // enter Slow Start
         recalculateSlowStartThreshold();
         state->snd_cwnd = state->snd_mss;
-        if (cwndVector) cwndVector->record(state->snd_cwnd);
+        conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
 
         tcpEV << "Set cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
 
@@ -136,5 +136,3 @@ void TCPTahoe::receivedDuplicateAck()
         state->rtseq_sendtime = 0;
     }
 }
-
-

@@ -285,12 +285,12 @@ class INET_API TCPConnection
     cMessage *synRexmitTimer;  // for retransmitting SYN and SYN+ACK
 
     // statistics
-    cOutVector *sndWndVector;   // snd_wnd
-    cOutVector *sndNxtVector;   // sent seqNo
-    cOutVector *sndAckVector;   // sent ackNo
-    cOutVector *rcvSeqVector;   // received seqNo
-    cOutVector *rcvAckVector;   // received ackNo (= snd_una)
-    cOutVector *unackedVector;  // number of bytes unacknowledged
+    simsignal_t sndWndSignal;   // snd_wnd
+    simsignal_t sndNxtSignal;   // sent seqNo
+    simsignal_t sndAckSignal;   // sent ackNo
+    simsignal_t rcvSeqSignal;   // received seqNo
+    simsignal_t rcvAckSignal;   // received ackNo (= snd_una)
+    simsignal_t unackedSignal;  // number of bytes unacknowledged
 
   protected:
     /** @name FSM transitions: analysing events and executing state transitions */

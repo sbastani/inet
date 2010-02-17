@@ -154,42 +154,11 @@ TCP_NSC::TCP_NSC()
     curConnM(NULL),
 
     // statistics:
-    sndWndVector(NULL),
-    rcvWndVector(NULL),
-    rcvAdvVector(NULL),
-    sndNxtVector(NULL),
-    sndAckVector(NULL),
-    rcvSeqVector(NULL),
-    rcvAckVector(NULL),
-    unackedVector(NULL),
-    dupAcksVector(NULL),
-    pipeVector(NULL),
-    sndSacksVector(NULL),
-    rcvSacksVector(NULL),
-    rcvOooSegVector(NULL),
-    sackedBytesVector(NULL),
-    tcpRcvQueueBytesVector(NULL),
-    tcpRcvQueueDropsVector(NULL)
+    sndNxtSignal(SIMSIGNAL_NULL),
+    sndAckSignal(SIMSIGNAL_NULL),
+    rcvSeqSignal(SIMSIGNAL_NULL),
+    rcvAckSignal(SIMSIGNAL_NULL)
 {
-    // statistics:
-    if (true) // (getTcpMain()->recordStatistics)
-    {
-        //sndWndVector = new cOutVector("send window");
-        //rcvWndVector = new cOutVector("receive window");
-        sndNxtVector = new cOutVector("sent seq");
-        sndAckVector = new cOutVector("sent ack");
-        rcvSeqVector = new cOutVector("rcvd seq");
-        rcvAckVector = new cOutVector("rcvd ack");
-        //unackedVector = new cOutVector("unacked bytes");
-        //dupAcksVector = new cOutVector("rcvd dupAcks");
-        //pipeVector = new cOutVector("pipe");
-        //sndSacksVector = new cOutVector("sent sacks");
-        //rcvSacksVector = new cOutVector("rcvd sacks");
-        //rcvOooSegVector = new cOutVector("rcvd oooseg");
-        //sackedBytesVector = new cOutVector("rcvd sackedBytes");
-        //tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
-        //tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
-    }
 }
 
 // return mapped remote ip in host byte order
@@ -336,6 +305,12 @@ void TCP_NSC::initialize()
     tcpEV << this << ": initialize\n";
     WATCH_MAP(tcpAppConnMapM);
 
+    // statistics:
+    sndNxtSignal = registerSignal("sndNxt");
+    sndAckSignal = registerSignal("sndAck");
+    rcvSeqSignal = registerSignal("rcvSeq");
+    rcvAckSignal = registerSignal("rcvAck");
+
     cModule *netw = simulation.getSystemModule();
     testingS = netw->hasPar("testing") && netw->par("testing").boolValue();
     logverboseS = !testingS && netw->hasPar("logverbose") && netw->par("logverbose").boolValue();
@@ -361,24 +336,6 @@ TCP_NSC::~TCP_NSC()
         delete (*i).second.pNscSocketM;
         tcpAppConnMapM.erase(i);
     }
-
-    // statistics
-    delete sndWndVector;
-    delete rcvWndVector;
-    delete rcvAdvVector;
-    delete sndNxtVector;
-    delete sndAckVector;
-    delete rcvSeqVector;
-    delete rcvAckVector;
-    delete unackedVector;
-    delete dupAcksVector;
-    delete sndSacksVector;
-    delete rcvSacksVector;
-    delete rcvOooSegVector;
-    delete tcpRcvQueueBytesVector;
-    delete tcpRcvQueueDropsVector;
-    delete pipeVector;
-    delete sackedBytesVector;
 }
 
 // send a TCP_I_ESTABLISHED msg to Application Layer
@@ -457,10 +414,8 @@ void TCP_NSC::handleIpInputMessage(TCPSegment* tcpsegP)
     }
 
     // statistics:
-    if (rcvSeqVector)
-        rcvSeqVector->record(tcpsegP->getSequenceNo());
-    if (rcvAckVector)
-        rcvAckVector->record(tcpsegP->getAckNo());
+    emit(rcvSeqSignal, tcpsegP->getSequenceNo());
+    emit(rcvAckSignal, tcpsegP->getAckNo());
 
     inetSockPair.remoteM.portM = tcpsegP->getSrcPort();
     inetSockPair.localM.portM = tcpsegP->getDestPort();
@@ -956,10 +911,9 @@ void TCP_NSC::sendToIP(const void *dataP, int lenP)
     }
 
     // record seq (only if we do send data) and ackno
-    if (sndNxtVector && tcpseg->getPayloadLength()!=0)
-        sndNxtVector->record(tcpseg->getSequenceNo());
-    if (sndAckVector)
-        sndAckVector->record(tcpseg->getAckNo());
+    if (tcpseg->getPayloadLength()!=0)
+        emit(sndNxtSignal, tcpseg->getSequenceNo());
+    emit(sndAckSignal, tcpseg->getAckNo());
 
     send(tcpseg, output);
 }

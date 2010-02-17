@@ -173,10 +173,9 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
     // record seq (only if we do send data) and ackno
-    if (sndNxtVector && tcpseg->getPayloadLength()!=0)
-        sndNxtVector->record(tcpseg->getSequenceNo());
-    if (sndAckVector)
-        sndAckVector->record(tcpseg->getAckNo());
+    if (tcpseg->getPayloadLength() != 0)
+        tcpMain->emit(sndNxtSignal, (long)(tcpseg->getSequenceNo()));
+    tcpMain->emit(sndAckSignal, (long)(tcpseg->getAckNo()));
 
     // final touches on the segment before sending
     tcpseg->setSrcPort(localPort);
@@ -401,8 +400,7 @@ void TCPConnection::sendSyn()
     tcpseg->setSynBit(true);
     updateRcvWnd();
     tcpseg->setWindow(state->rcv_wnd);
-    if (rcvWndVector)
-        rcvWndVector->record(state->rcv_wnd);
+    tcpMain->emit(rcvWndSignal, (long)(state->rcv_wnd));
 
     state->snd_max = state->snd_nxt = state->iss+1;
 
@@ -423,8 +421,7 @@ void TCPConnection::sendSynAck()
     tcpseg->setAckBit(true);
     updateRcvWnd();
     tcpseg->setWindow(state->rcv_wnd);
-    if (rcvWndVector)
-        rcvWndVector->record(state->rcv_wnd);
+    tcpMain->emit(rcvWndSignal, (long)(state->rcv_wnd));
 
     state->snd_max = state->snd_nxt = state->iss+1;
 
@@ -479,8 +476,7 @@ void TCPConnection::sendAck()
     tcpseg->setAckNo(state->rcv_nxt);
     updateRcvWnd();
     tcpseg->setWindow(state->rcv_wnd);
-    if (rcvWndVector)
-        rcvWndVector->record(state->rcv_wnd);
+    tcpMain->emit(rcvWndSignal, (long)(state->rcv_wnd));
 
     // write header options
     writeHeaderOptions(tcpseg);
@@ -504,8 +500,7 @@ void TCPConnection::sendFin()
     tcpseg->setSequenceNo(state->snd_nxt);
     updateRcvWnd();
     tcpseg->setWindow(state->rcv_wnd);
-    if (rcvWndVector)
-        rcvWndVector->record(state->rcv_wnd);
+    tcpMain->emit(rcvWndSignal, (long)(state->rcv_wnd));
 
     // send it
     sendToIP(tcpseg);
@@ -534,8 +529,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     tcpseg->setAckBit(true);
     updateRcvWnd();
     tcpseg->setWindow(state->rcv_wnd);
-    if (rcvWndVector)
-        rcvWndVector->record(state->rcv_wnd);
+    tcpMain->emit(rcvWndSignal, (long)(state->rcv_wnd));
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes==tcpseg->getPayloadLength());
@@ -634,7 +628,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow) // 
     // but we'll need snd_max to check validity of ACKs -- they must ack
     // something we really sent)
     state->snd_max = std::max (state->snd_nxt, state->snd_max);
-    if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
+    tcpMain->emit(unackedSignal, (long)(state->snd_max - state->snd_una));
 
     // notify (once is enough)
     tcpAlgorithm->ackSent();
@@ -671,7 +665,7 @@ bool TCPConnection::sendProbe()
     // but we'll need snd_max to check validity of ACKs -- they must ack
     // something we really sent)
     state->snd_max = state->snd_nxt;
-    if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
+    tcpMain->emit(unackedSignal, (long)(state->snd_max - state->snd_una));
 
     // notify
     tcpAlgorithm->ackSent();
@@ -898,14 +892,12 @@ void TCPConnection::readHeaderOptions(TCPSegment *tcpseg)
                                 }
                             }
                             state->rcv_sacks = state->rcv_sacks + n; // total counter, no current number
-                            if (rcvSacksVector)
-                                rcvSacksVector->record(state->rcv_sacks);
+                            tcpMain->emit(rcvSacksSignal, (long)(state->rcv_sacks));
 
                             // update scoreboard
                             state->sackedBytes_old = state->sackedBytes; // needed for RFC 3042 to check if last dupAck contained new sack information
                             state->sackedBytes = rexmitQueue->getTotalAmountOfSackedBytes();
-                            if (sackedBytesVector)
-                            	sackedBytesVector->record(state->sackedBytes);
+                            tcpMain->emit(sackedBytesSignal, (long)(state->sackedBytes));
                         }
                     }
                     else
@@ -1223,8 +1215,7 @@ TCPSegment TCPConnection::addSacks(TCPSegment *tcpseg)
 
         // update number of sent sacks
         state->snd_sacks = state->snd_sacks+n;
-        if (sndSacksVector)
-            sndSacksVector->record(state->snd_sacks);
+        tcpMain->emit(sndSacksSignal, (long)(state->snd_sacks));
 
         uint counter = 0;
         tcpEV << n << " SACK(s) added to header:\n";
@@ -1287,8 +1278,7 @@ void TCPConnection::updateRcvQueueVars()
     state->usedRcvBuffer = state->maxRcvBuffer - state->freeRcvBuffer;
 
     // update receive queue related statistics
-    if (tcpRcvQueueBytesVector)
-        tcpRcvQueueBytesVector->record(state->usedRcvBuffer);
+    tcpMain->emit(tcpRcvQueueBytesSignal, (long)(state->usedRcvBuffer));
 
     tcpEV << "receiveQ: receiveQLength=" << receiveQueue->getQueueLength() << " maxRcvBuffer=" << state->maxRcvBuffer << " usedRcvBuffer=" << state->usedRcvBuffer << " freeRcvBuffer=" << state->freeRcvBuffer << "\n";
 }
@@ -1320,8 +1310,7 @@ void TCPConnection::updateRcvWnd()
 	if (win > 0 && seqGE(state->rcv_nxt + win, state->rcv_adv))
 	{
 		state->rcv_adv = state->rcv_nxt + win;
-    	if (rcvAdvVector)
-        	rcvAdvVector->record(state->rcv_adv);
+		tcpMain->emit(rcvAdvSignal, (long)(state->rcv_adv));
     }
 
     state->rcv_wnd = win;
@@ -1340,8 +1329,7 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg)
         state->snd_wnd = tcpseg->getWindow();
         state->snd_wl1 = tcpseg->getSequenceNo();
         state->snd_wl2 = tcpseg->getAckNo();
-        if (sndWndVector)
-            sndWndVector->record(state->snd_wnd);
+       	tcpMain->emit(sndWndSignal, (long)(state->snd_wnd));
     }
 }
 
@@ -1428,8 +1416,7 @@ void TCPConnection::setPipe()
 	}
 
 	state->pipe = state->pipe * state->snd_mss; // TODO - remove this line if using byte ranges
-	if (pipeVector)
-		pipeVector->record(state->pipe);
+	tcpMain->emit(pipeSignal, (long)(state->pipe));
 }
 
 uint32 TCPConnection::nextSeg()
@@ -1603,8 +1590,7 @@ void TCPConnection::sendSegmentDuringLossRecoveryPhase(uint32 seqNum)
 	else if (seqGE(sentSeqNum, state->snd_max)) // HighData = snd_max
 		state->snd_max = sentSeqNum;
 
-    if (unackedVector)
-    	unackedVector->record(state->snd_max - state->snd_una);
+	tcpMain->emit(unackedSignal, (long)(state->snd_max - state->snd_una));
 
 	// RFC 3517, page 9: "6   Managing the RTO Timer
 	//
@@ -1697,8 +1683,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
 
 					state->snd_max = std::max (state->snd_nxt, state->snd_max);
 
-					if (unackedVector)
-						unackedVector->record(state->snd_max - state->snd_una);
+					tcpMain->emit(unackedSignal, (long)(state->snd_max - state->snd_una));
 
 					// reset snd_nxt if needed
 					if (state->afterRto)

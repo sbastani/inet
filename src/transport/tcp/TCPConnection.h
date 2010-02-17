@@ -330,24 +330,24 @@ class INET_API TCPConnection
     cMessage *synRexmitTimer;  // for retransmitting SYN and SYN+ACK
 
     // statistics
-    cOutVector *sndWndVector;   // snd_wnd
-    cOutVector *rcvWndVector;   // rcv_wnd
-    cOutVector *rcvAdvVector;   // current advertised window (=rcv_avd)
-    cOutVector *sndNxtVector;   // sent seqNo
-    cOutVector *sndAckVector;   // sent ackNo
-    cOutVector *rcvSeqVector;   // received seqNo
-    cOutVector *rcvAckVector;   // received ackNo (= snd_una)
-    cOutVector *unackedVector;  // number of bytes unacknowledged
+    simsignal_t sndWndSignal;   // snd_wnd
+    simsignal_t rcvWndSignal;   // rcv_wnd
+    simsignal_t rcvAdvSignal;   // current advertised window (=rcv_avd)
+    simsignal_t sndNxtSignal;   // sent seqNo
+    simsignal_t sndAckSignal;   // sent ackNo
+    simsignal_t rcvSeqSignal;   // received seqNo
+    simsignal_t rcvAckSignal;   // received ackNo (= snd_una)
+    simsignal_t unackedSignal;  // number of bytes unacknowledged
 
-    cOutVector *dupAcksVector;   // current number of received dupAcks
-    cOutVector *pipeVector;    	 // current sender's estimate of bytes outstanding in the network
-    cOutVector *sndSacksVector;  // number of sent Sacks
-    cOutVector *rcvSacksVector;  // number of received Sacks
-    cOutVector *rcvOooSegVector; // number of received out-of-order segments
+    simsignal_t dupAcksSignal;   // current number of received dupAcks
+    simsignal_t pipeSignal;    	 // current sender's estimate of bytes outstanding in the network
+    simsignal_t sndSacksSignal;  // number of sent Sacks
+    simsignal_t rcvSacksSignal;  // number of received Sacks
+    simsignal_t rcvOooSegSignal; // number of received out-of-order segments
 
-    cOutVector *sackedBytesVector;		  // current number of received sacked bytes
-    cOutVector *tcpRcvQueueBytesVector;   // current amount of used bytes in tcp receive queue
-    cOutVector *tcpRcvQueueDropsVector;   // number of drops in tcp receive queue
+    simsignal_t sackedBytesSignal;		  // current number of received sacked bytes
+    simsignal_t tcpRcvQueueBytesSignal;   // current amount of used bytes in tcp receive queue
+    simsignal_t tcpRcvQueueDropsSignal;   // number of drops in tcp receive queue
 
   protected:
     /** @name FSM transitions: analysing events and executing state transitions */

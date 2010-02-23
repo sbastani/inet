@@ -17,11 +17,8 @@
 //
 
 
-#include <omnetpp.h>
-
 #include <string.h>
 #include <assert.h>
-
 #include "TCP.h"
 #include "TCPConnection.h"
 #include "TCPSegment.h"
@@ -153,9 +150,9 @@ TCPConnection::TCPConnection()
     tcpAlgorithm = NULL;
     state = NULL;
     the2MSLTimer = connEstabTimer = finWait2Timer = synRexmitTimer = NULL;
-    sndWndSignal = rcvWndSignal = rcvAdvSignal = sndNxtSignal = sndAckSignal = rcvSeqSignal = rcvAckSignal = unackedSignal =
-    dupAcksSignal = sndSacksSignal = rcvSacksSignal = rcvOooSegSignal =
-    tcpRcvQueueBytesSignal = tcpRcvQueueDropsSignal = pipeSignal = sackedBytesSignal = SIMSIGNAL_NULL;
+    sndWndVector = rcvWndVector = rcvAdvVector = sndNxtVector = sndAckVector = rcvSeqVector = rcvAckVector = unackedVector =
+    dupAcksVector = sndSacksVector = rcvSacksVector = rcvOooSegVector =
+    tcpRcvQueueBytesVector = tcpRcvQueueDropsVector = pipeVector = sackedBytesVector = NULL;
 }
 
 //
@@ -194,22 +191,43 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     synRexmitTimer->setContextPointer(this);
 
     // statistics
-	sndWndSignal = tcpMain->registerSignal("sndWnd");
-	rcvWndSignal = tcpMain->registerSignal("rcvWnd");
-	rcvAdvSignal = tcpMain->registerSignal("advWnd");
-	sndNxtSignal = tcpMain->registerSignal("sntSeq");
-	sndAckSignal = tcpMain->registerSignal("sntAck");
-	rcvSeqSignal = tcpMain->registerSignal("rcvSeq");
-	rcvAckSignal = tcpMain->registerSignal("rcvAck");
-	unackedSignal = tcpMain->registerSignal("unacked");
-	dupAcksSignal = tcpMain->registerSignal("rcvDupAcks");
-	pipeSignal = tcpMain->registerSignal("pipe");
-	sndSacksSignal = tcpMain->registerSignal("sentSacks");
-	rcvSacksSignal = tcpMain->registerSignal("rcvdSacks");
-	rcvOooSegSignal = tcpMain->registerSignal("rcvdOooseg");
-	sackedBytesSignal = tcpMain->registerSignal("rcvdSackedBytes");
-	tcpRcvQueueBytesSignal = tcpMain->registerSignal("tcpRcvQueueBytes");
-	tcpRcvQueueDropsSignal = tcpMain->registerSignal("tcpRcvQueueDrops");
+    sndWndVector = NULL;
+    rcvWndVector = NULL;
+    rcvAdvVector = NULL;
+    sndNxtVector = NULL;
+    sndAckVector = NULL;
+    rcvSeqVector = NULL;
+    rcvAckVector = NULL;
+    unackedVector = NULL;
+
+    dupAcksVector = NULL;
+    sndSacksVector = NULL;
+    rcvSacksVector = NULL;
+    rcvOooSegVector = NULL;
+    tcpRcvQueueBytesVector = NULL;
+    tcpRcvQueueDropsVector = NULL;
+    pipeVector = NULL;
+    sackedBytesVector = NULL;
+
+    if (getTcpMain()->recordStatistics)
+    {
+        sndWndVector = new cOutVector("send window");
+        rcvWndVector = new cOutVector("receive window");
+        rcvAdvVector = new cOutVector("advertised window");
+        sndNxtVector = new cOutVector("sent seq");
+        sndAckVector = new cOutVector("sent ack");
+        rcvSeqVector = new cOutVector("rcvd seq");
+        rcvAckVector = new cOutVector("rcvd ack");
+        unackedVector = new cOutVector("unacked bytes");
+        dupAcksVector = new cOutVector("rcvd dupAcks");
+        pipeVector = new cOutVector("pipe");
+        sndSacksVector = new cOutVector("sent sacks");
+        rcvSacksVector = new cOutVector("rcvd sacks");
+        rcvOooSegVector = new cOutVector("rcvd oooseg");
+        sackedBytesVector = new cOutVector("rcvd sackedBytes");
+        tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
+        tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
+    }
 }
 
 TCPConnection::~TCPConnection()
@@ -224,6 +242,24 @@ TCPConnection::~TCPConnection()
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
     if (finWait2Timer)  delete cancelEvent(finWait2Timer);
     if (synRexmitTimer) delete cancelEvent(synRexmitTimer);
+
+    // statistics
+    delete sndWndVector;
+    delete rcvWndVector;
+    delete rcvAdvVector;
+    delete sndNxtVector;
+    delete sndAckVector;
+    delete rcvSeqVector;
+    delete rcvAckVector;
+    delete unackedVector;
+    delete dupAcksVector;
+    delete sndSacksVector;
+    delete rcvSacksVector;
+    delete rcvOooSegVector;
+    delete tcpRcvQueueBytesVector;
+    delete tcpRcvQueueDropsVector;
+    delete pipeVector;
+    delete sackedBytesVector;
 }
 
 bool TCPConnection::processTimer(cMessage *msg)

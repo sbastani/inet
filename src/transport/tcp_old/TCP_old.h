@@ -190,11 +190,6 @@ class INET_API TCP : public cSimpleModule
      * To be called from TCPConnection: reserves an ephemeral port for the connection.
      */
     virtual short getEphemeralPort();
-
-  public:
-    inline void emit(simsignal_t signalID, uint32_t l) { cSimpleModule::emit(signalID, (long)l); }
-    inline void emit(simsignal_t signalID, simtime_t l) { cSimpleModule::emit(signalID, l); }
-    //inline void emit(simsignal_t signalID, unsigned int l) { cSimpleModule::emit(signalID, (long)l); }
 };
 
 }

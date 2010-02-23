@@ -159,14 +159,24 @@ class INET_API TCP_NSC : public cSimpleModule, ISendCallback, IInterruptCallback
     static const char * bufferSizeParamNameS; // name of buffersize parameter
 
     // statistics
-    simsignal_t sndNxtSignal;   // sent seqNo
-    simsignal_t sndAckSignal;   // sent ackNo
-    simsignal_t rcvSeqSignal;   // received seqNo
-    simsignal_t rcvAckSignal;   // received ackNo (= snd_una)
-  public:
-    inline void emit(simsignal_t signalID, uint32_t l) { cSimpleModule::emit(signalID, (long)l); }
-    inline void emit(simsignal_t signalID, simtime_t l) { cSimpleModule::emit(signalID, l); }
-    //inline void emit(simsignal_t signalID, unsigned int l) { cSimpleModule::emit(signalID, (long)l); }
+    cOutVector *sndWndVector;   // snd_wnd
+    cOutVector *rcvWndVector;   // rcv_wnd
+    cOutVector *rcvAdvVector;   // current advertised window (=rcv_avd)
+    cOutVector *sndNxtVector;   // sent seqNo
+    cOutVector *sndAckVector;   // sent ackNo
+    cOutVector *rcvSeqVector;   // received seqNo
+    cOutVector *rcvAckVector;   // received ackNo (= snd_una)
+    cOutVector *unackedVector;  // number of bytes unacknowledged
+
+    cOutVector *dupAcksVector;   // current number of received dupAcks
+    cOutVector *pipeVector;      // current sender's estimate of bytes outstanding in the network
+    cOutVector *sndSacksVector;  // number of sent Sacks
+    cOutVector *rcvSacksVector;  // number of received Sacks
+    cOutVector *rcvOooSegVector; // number of received out-of-order segments
+
+    cOutVector *sackedBytesVector;                // current number of received sacked bytes
+    cOutVector *tcpRcvQueueBytesVector;   // current amount of used bytes in tcp receive queue
+    cOutVector *tcpRcvQueueDropsVector;   // number of drops in tcp receive queue
 };
 
 #endif

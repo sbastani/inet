@@ -102,7 +102,7 @@ TCPConnection::TCPConnection()
     tcpAlgorithm = NULL;
     state = NULL;
     the2MSLTimer = connEstabTimer = finWait2Timer = synRexmitTimer = NULL;
-    sndWndSignal = sndNxtSignal = sndAckSignal = rcvSeqSignal = rcvAckSignal = unackedSignal = SIMSIGNAL_NULL;
+    sndWndVector = sndNxtVector = sndAckVector = rcvSeqVector = rcvAckVector = unackedVector = NULL;
 }
 
 //
@@ -140,13 +140,21 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     synRexmitTimer->setContextPointer(this);
 
     // statistics
+    sndWndVector = NULL;
+    sndNxtVector = NULL;
+    sndAckVector = NULL;
+    rcvSeqVector = NULL;
+    rcvAckVector = NULL;
+    unackedVector = NULL;
+
+    if (getTcpMain()->recordStatistics)
     {
-        sndWndSignal = tcpMain->registerSignal("sndWnd");
-        sndNxtSignal = tcpMain->registerSignal("sndNxt");
-        sndAckSignal = tcpMain->registerSignal("sndAck");
-        rcvSeqSignal = tcpMain->registerSignal("rcvSeq");
-        rcvAckSignal = tcpMain->registerSignal("rcvAck");
-        unackedSignal = tcpMain->registerSignal("unacked");
+        sndWndVector = new cOutVector("send window");
+        sndNxtVector = new cOutVector("send seq");
+        sndAckVector = new cOutVector("sent ack");
+        rcvSeqVector = new cOutVector("rcvd seq");
+        rcvAckVector = new cOutVector("rcvd ack");
+        unackedVector = new cOutVector("unacked bytes");
     }
 }
 
@@ -161,6 +169,14 @@ TCPConnection::~TCPConnection()
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
     if (finWait2Timer)  delete cancelEvent(finWait2Timer);
     if (synRexmitTimer) delete cancelEvent(synRexmitTimer);
+
+    // statistics
+    delete sndWndVector;
+    delete sndNxtVector;
+    delete sndAckVector;
+    delete rcvSeqVector;
+    delete rcvAckVector;
+    delete unackedVector;
 }
 
 bool TCPConnection::processTimer(cMessage *msg)

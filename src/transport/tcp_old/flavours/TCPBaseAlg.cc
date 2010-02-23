@@ -91,7 +91,7 @@ TCPBaseAlg::TCPBaseAlg() : TCPAlgorithm(),
   state((TCPBaseAlgStateVariables *&)TCPAlgorithm::state)
 {
     rexmitTimer = persistTimer = delayedAckTimer = keepAliveTimer = NULL;
-    cwndSignal = ssthreshSignal = rttSignal = srttSignal = rttvarSignal = rtoSignal = SIMSIGNAL_NULL;
+    cwndVector = ssthreshVector = rttVector = srttVector = rttvarVector = rtoVector = NULL;
 }
 
 TCPBaseAlg::~TCPBaseAlg()
@@ -103,6 +103,14 @@ TCPBaseAlg::~TCPBaseAlg()
     if (persistTimer)    delete cancelEvent(persistTimer);
     if (delayedAckTimer) delete cancelEvent(delayedAckTimer);
     if (keepAliveTimer)  delete cancelEvent(keepAliveTimer);
+
+    // delete statistics objects
+    delete cwndVector;
+    delete ssthreshVector;
+    delete rttVector;
+    delete srttVector;
+    delete rttvarVector;
+    delete rtoVector;
 }
 
 void TCPBaseAlg::initialize()
@@ -119,15 +127,14 @@ void TCPBaseAlg::initialize()
     delayedAckTimer->setContextPointer(conn);
     keepAliveTimer->setContextPointer(conn);
 
+    if (conn->getTcpMain()->recordStatistics)
     {
-        //statistics:
-    	TCP* tcpMain = conn->getTcpMain();
-        cwndSignal = tcpMain->registerSignal("cwnd");
-        ssthreshSignal = tcpMain->registerSignal("ssthresh");
-        rttSignal = tcpMain->registerSignal("measuredRTT");
-        srttSignal = tcpMain->registerSignal("smoothedRTT");
-        rttvarSignal = tcpMain->registerSignal("RTTVAR");
-        rtoSignal = tcpMain->registerSignal("RTO");
+        cwndVector = new cOutVector("cwnd");
+        ssthreshVector = new cOutVector("ssthresh");
+        rttVector = new cOutVector("measured RTT");
+        srttVector = new cOutVector("smoothed RTT");
+        rttvarVector = new cOutVector("RTTVAR");
+        rtoVector = new cOutVector("RTO");
     }
 }
 
@@ -136,7 +143,7 @@ void TCPBaseAlg::established(bool active)
     // initialize cwnd (we may learn MSS during connection setup --
     // this (MSS TCP option) is not implemented yet though)
     state->snd_cwnd = state->snd_mss;
-    conn->getTcpMain()->emit(cwndSignal, state->snd_cwnd);
+    if (cwndVector) cwndVector->record(state->snd_cwnd);
 
     if (active)
     {
@@ -278,13 +285,10 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked)
     // record statistics
     tcpEV << "Measured RTT=" << (newRTT*1000) << "ms, updated SRTT=" << (srtt*1000)
           << "ms, new RTO=" << (rto*1000) << "ms\n";
-    {
-    	TCP* tcpMain = conn->getTcpMain();
-    	tcpMain->emit(rttSignal, newRTT);
-    	tcpMain->emit(srttSignal, srtt);
-    	tcpMain->emit(rttvarSignal, rttvar);
-    	tcpMain->emit(rtoSignal, rto);
-    }
+    if (rttVector) rttVector->record(newRTT);
+    if (srttVector) srttVector->record(srtt);
+    if (rttvarVector) rttvarVector->record(rttvar);
+    if (rtoVector) rtoVector->record(rto);
 }
 
 bool TCPBaseAlg::sendData()

@@ -169,9 +169,9 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
     // record seq (only if we do send data) and ackno
-    if (tcpseg->getPayloadLength()!=0)
-        tcpMain->emit(sndNxtSignal, tcpseg->getSequenceNo());
-    tcpMain->emit(sndAckSignal, tcpseg->getAckNo());
+    if (sndNxtVector && tcpseg->getPayloadLength()!=0)
+        sndNxtVector->record(tcpseg->getSequenceNo());
+    if (sndAckVector) sndAckVector->record(tcpseg->getAckNo());
 
     // final touches on the segment before sending
     tcpseg->setSrcPort(localPort);
@@ -538,7 +538,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, int congestionWindow)
     // but we'll need snd_max to check validity of ACKs -- they must ack
     // something we really sent)
     state->snd_max = state->snd_nxt;
-    tcpMain->emit(unackedSignal, state->snd_max - state->snd_una);
+    if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
 
     // notify (once is enough)
     tcpAlgorithm->ackSent();
@@ -568,7 +568,7 @@ bool TCPConnection::sendProbe()
     // but we'll need snd_max to check validity of ACKs -- they must ack
     // something we really sent)
     state->snd_max = state->snd_nxt;
-    tcpMain->emit(unackedSignal, state->snd_max - state->snd_una);
+    if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
 
     // notify
     tcpAlgorithm->ackSent();

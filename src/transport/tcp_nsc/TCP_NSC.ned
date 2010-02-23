@@ -82,10 +82,6 @@ import inet.transport.tcp.ITCP;
 simple TCP_NSC like ITCP
 {
     parameters:
-        @signal[sndNxt](title="sndNxt");
-        @signal[sndAck](title="sndAck");
-        @signal[rcvSeq](title="rcvSeq");
-        @signal[rcvAck](title="rcvAck");
         // full library name of the tcp stack implementation
         string stackName = default("liblinux2.6.26.so") @choice("liblinux2.6.10.so","liblinux2.6.18.so","liblinux2.6.26.so","liblwip.so","libopenbsd3.5.so","libfreebsd5.3.so");
         int stackBufferSize = default(80000); // the size of buffer used when communicating with the specified NSC stack

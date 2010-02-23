@@ -107,13 +107,13 @@ class INET_API TCPBaseAlg : public TCPAlgorithm
     cMessage *delayedAckTimer;
     cMessage *keepAliveTimer;
 
-    simsignal_t cwndSignal;  // will record changes to snd_cwnd
-    simsignal_t ssthreshSignal; // will record changes to ssthresh
-    simsignal_t rttSignal;   // will record measured RTT
-    simsignal_t srttSignal;  // will record smoothed RTT
-    simsignal_t rttvarSignal;// will record RTT variance (rttvar)
-    simsignal_t rtoSignal;   // will record retransmission timeout
-    simsignal_t numRtosSignal; // will record total number of RTOs
+    cOutVector *cwndVector;  // will record changes to snd_cwnd
+    cOutVector *ssthreshVector; // will record changes to ssthresh
+    cOutVector *rttVector;   // will record measured RTT
+    cOutVector *srttVector;  // will record smoothed RTT
+    cOutVector *rttvarVector;// will record RTT variance (rttvar)
+    cOutVector *rtoVector;   // will record retransmission timeout
+    cOutVector *numRtosVector; // will record total number of RTOs
 
   protected:
     /** @name Process REXMIT, PERSIST, DELAYED-ACK and KEEP-ALIVE timers */

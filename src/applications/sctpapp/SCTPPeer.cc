@@ -44,12 +44,12 @@ void SCTPPeer::initialize()
 	WATCH(packetsRcvd);
 	WATCH(bytesSent);
 	WATCH(numRequestsToSend);
-	// parameters
 
     sentPkBytesSignal = registerSignal("sentPkBytes");
     sentEchoedPkBytesSignal = registerSignal("sentEchoedPkBytes");
     rcvdPkBytesSignal = registerSignal("rcvdPkBytes");
 
+    // parameters
 	const char* address = par("address");
 
 	token = strtok((char*)address,",");
@@ -109,7 +109,7 @@ void SCTPPeer::sendOrSchedule(cPacket *msg)
 
 void SCTPPeer::generateAndSend(SCTPConnectInfo *connectInfo)
 {
-uint32 numBytes;
+    uint32 numBytes;
 	cPacket* cmsg = new cPacket("CMSG");
 	SCTPSimpleMessage* msg=new SCTPSimpleMessage("Server");
 	numBytes=(long)par("requestLength");
@@ -133,7 +133,7 @@ uint32 numBytes;
 	cmsg->setKind(SCTP_C_SEND);
 	cmsg->setControlInfo(cmd);
 	packetsSent++;
-	bytesSent+=msg->getBitLength()/8;
+	bytesSent += msg->getByteLength();
 	emit(sentPkBytesSignal, (long)(msg->getByteLength()));
 	sendOrSchedule(cmsg);
 }
@@ -160,6 +160,7 @@ void SCTPPeer::handleMessage(cMessage *msg)
 	{
 
 		handleTimer(msg);
+		return;
 	}
 	switch (msg->getKind())
 	{
@@ -651,7 +652,7 @@ void SCTPPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
 	{
 		SCTPSimpleMessage *smsg=check_and_cast<SCTPSimpleMessage*>(msg->dup());
 		cPacket* cmsg = new cPacket("SVData");
-		echoedBytesSent+=smsg->getBitLength()/8;
+		echoedBytesSent += smsg->getByteLength();
 		emit(sentEchoedPkBytesSignal, (long)(smsg->getByteLength()));
 		cmsg->encapsulate(smsg);
 		if (ind->getSendUnordered())

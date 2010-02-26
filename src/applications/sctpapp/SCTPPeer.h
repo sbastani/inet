@@ -65,6 +65,10 @@ class SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInterface
 		void sendOrSchedule(cPacket *msg);
 		void sendRequest(bool last=true);
 		int32 ssn;
+        simsignal_t sentPkBytesSignal;
+        simsignal_t sentEchoedPkBytesSignal;
+        simsignal_t rcvdPkBytesSignal;
+
 	public:
 		struct pathStatus {
 			bool active;
@@ -113,5 +117,3 @@ class SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInterface
 };
 
 #endif
-
-

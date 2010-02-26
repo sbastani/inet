@@ -40,15 +40,19 @@ class SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInterface
 		int32 numSessions;
 		int32 numBroken;
 		uint64 packetsSent;
+        uint64 bytesSent;
+        uint64 echoedBytesSent;
 		uint64 packetsRcvd;
-		uint64 bytesSent;
-		uint64 echoedBytesSent;
 		uint64 bytesRcvd;
 		uint64 numRequestsToSend; // requests to send in this session
 		uint64 numPacketsToReceive;
 		uint32 numBytes;
 		int32 echoFactor;
 		int32 queueSize;
+        simsignal_t sentPkBytesSignal;
+        simsignal_t rcvdPkBytesSignal;
+        simsignal_t sentEchoedPkBytesSignal;
+
 		bool ordered;
 		bool sendAllowed;
 		bool timer;

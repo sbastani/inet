@@ -1,4 +1,4 @@
-//
+//;;
 // Copyright (C) 2008 Irene Ruengeler
 //
 // This program is free software; you can redistribute it and/or
@@ -42,6 +42,10 @@ void SCTPClient::initialize()
 	WATCH(packetsRcvd);
 	WATCH(bytesSent);
 	WATCH(bytesRcvd);
+
+	sentPkBytesSignal = registerSignal("sentPkBytes");
+	rcvdPkBytesSignal = registerSignal("rcvdPkBytes");
+	sentEchoedPkBytesSignal = registerSignal("sentEchoedPkBytes");
 
 	// parameters
 	address=par("address");
@@ -119,7 +123,7 @@ void SCTPClient::connect()
 	ev<<"connect to address "<<connectAddress<<"\n";
 	socket.connect(IPAddressResolver().resolve(connectAddress, 1), connectPort, (uint32)par("numRequestsPerSession"));
 
-numSessions++;
+	numSessions++;
 }
 
 void SCTPClient::close()
@@ -253,12 +257,14 @@ void SCTPClient::socketDataArrived(int32, void *, cPacket *msg, bool)
 
 	sctpEV3<<"Client received packet Nr "<<packetsRcvd<<" from SCTP\n";
 	SCTPCommand* ind = check_and_cast<SCTPCommand*>(msg->removeControlInfo());
+	emit(rcvdPkBytesSignal, (long)(msg->getByteLength()));
 	bytesRcvd+=msg->getByteLength();
 	if (echoFactor > 0)
 	{
 		SCTPSimpleMessage *smsg=check_and_cast<SCTPSimpleMessage*>(msg->dup());
 		cPacket* cmsg = new cPacket("SVData");
-		echoedBytesSent+=smsg->getBitLength()/8;
+		echoedBytesSent += smsg->getByteLength();
+		emit(sentEchoedPkBytesSignal, (long)(smsg->getByteLength()));
 		cmsg->encapsulate(smsg);
 		if (ind->getSendUnordered())
 			cmsg->setKind(SCTP_C_SEND_UNORDERED);
@@ -305,7 +311,8 @@ void SCTPClient::sendRequest(bool last)
 		cmsg->setKind(SCTP_C_SEND_UNORDERED);
 	// send SCTPMessage with SCTPSimpleMessage enclosed
 	socket.send(cmsg, last);
-	bytesSent+=numBytes;
+	bytesSent += numBytes;
+	emit(sentPkBytesSignal, (long)numBytes);
 }
 
 void SCTPClient::handleTimer(cMessage *msg)
@@ -486,7 +493,7 @@ void SCTPClient::finish()
 		delete stopTimer;
 	}
 	ev << getFullPath() << ": opened " << numSessions << " sessions\n";
-	ev << getFullPath() << ": sent " << bytesSent << " bytes in " << packetsSent << " packets\n";
+	ev << getFullPath() << ": sent " << bytesSent << " bytes in " << packetsSent << " packets\n"; //FIXME: sent bytesSent+echoedBytesSent bytes in packetsSent packets
 	ev << getFullPath() << ": received " << bytesRcvd << " bytes in " << packetsRcvd << " packets\n";
 	sctpEV3<<"Client finished\n";
 }

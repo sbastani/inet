@@ -66,7 +66,7 @@ void TCPSessionApp::count(cMessage *msg)
     else
     {
         indicationsRcvd++;
-        emit(rcvdIndicationsSignal, (long)msg->getKind());
+        emit(rcvdIndicationsSignal, msg->getKind());
     }
 }
 
@@ -157,7 +157,7 @@ void TCPSessionApp::activity()
         EV << "sending " << i->numBytes << " bytes\n";
         cPacket *msg = new cPacket("data1");
         msg->setByteLength(i->numBytes);
-        emit(sentPkBytesSignal, (long)(i->numBytes));
+        emit(sentPkBytesSignal, i->numBytes);
         socket.send(msg);
     }
 

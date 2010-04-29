@@ -25,7 +25,7 @@
 #include "IPControlInfo.h"
 #include "IPv6ControlInfo.h"
 #include "sim_interface.h" // NSC header
-#include "tcp.h"
+#include "headers/tcp.h"
 #include "TCP_NSC.h"
 #include "TCP_NSC_Queues.h"
 #include "TCPCommand_m.h"

@@ -25,7 +25,7 @@
 
 #include "IPControlInfo.h"
 #include "IPv6ControlInfo.h"
-#include "tcp.h"
+#include "headers/tcp.h"
 #include "TCPCommand_m.h"
 #include "TCPIPchecksum.h"
 #include "TCP_NSC_Queues.h"

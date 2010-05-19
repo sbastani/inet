@@ -15,15 +15,16 @@
 #define __INET_TCPECHOAPP_H
 
 #include <omnetpp.h>
-#include "INETDefs.h"
 
+#include "INETDefs.h"
+#include "TCPGenericApp.h"
 
 
 /**
  * Accepts any number of incoming connections, and sends back whatever
  * arrives on them.
  */
-class INET_API TCPEchoApp : public cSimpleModule
+class INET_API TCPEchoApp : public TCPGenericApp
 {
   protected:
     simtime_t delay;

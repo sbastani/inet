@@ -141,7 +141,7 @@ void TCPSessionApp::activity()
     {
         waitUntil(tSend);
         EV << "sending " << sendBytes << " bytes\n";
-        cPacket *msg = new GenericAppMsg("data1");
+        cPacket *msg = new cPacket("data1");
         msg->setByteLength(sendBytes);
         socket.send(msg);
     }
@@ -149,7 +149,7 @@ void TCPSessionApp::activity()
     {
         waitUntil(i->tSend);
         EV << "sending " << i->numBytes << " bytes\n";
-        cPacket *msg = new GenericAppMsg("data1");
+        cPacket *msg = new cPacket("data1");
         msg->setByteLength(i->numBytes);
         socket.send(msg);
     }
